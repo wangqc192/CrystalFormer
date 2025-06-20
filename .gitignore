@@ -6,3 +6,7 @@ data/
 experimental/
 *.ipynb
 *.egg-info/
+*.err
+build
+out
+submit.sh
