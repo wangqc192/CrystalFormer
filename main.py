@@ -6,6 +6,7 @@ import os
 import multiprocessing
 import math
 import pandas as pd
+import pickle
 
 from crystalformer.src.utils import GLXYZAW_from_file, letter_to_number
 from crystalformer.src.elements import element_dict, element_list
@@ -92,8 +93,12 @@ if args.num_io_process > num_cpu:
 
 ################### Data #############################
 if args.optimizer != "none":
-    train_data = GLXYZAW_from_file(args.train_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
-    valid_data = GLXYZAW_from_file(args.valid_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
+    #train_data = GLXYZAW_from_file(args.train_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
+    #valid_data = GLXYZAW_from_file(args.valid_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
+    with open('/public/home/wangqingchang/CrystalFormer/data/mp_20/train.pkl', 'rb') as f:
+        train_data = pickle.load(f)
+    with open('/public/home/wangqingchang/CrystalFormer/data/mp_20/val.pkl', 'rb') as f:
+        valid_data = pickle.load(f)
 else:
     assert (args.spacegroup is not None) # for inference we need to specify space group
     test_data = GLXYZAW_from_file(args.test_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
