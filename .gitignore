@@ -2,3 +2,7 @@
 job*
 *.out
 __pycache__/
+*.err
+data/*
+*log
+output/*
