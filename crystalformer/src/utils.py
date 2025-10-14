@@ -8,6 +8,7 @@ from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from functools import partial
 import multiprocessing
 import os
+import pickle
 
 from crystalformer.src.wyckoff import mult_table
 from crystalformer.src.elements import element_list
@@ -161,6 +162,9 @@ def GLXYZAW_from_file(csv_file, atom_types, wyck_types, n_max, num_workers=1):
     L = jnp.array(L).reshape(-1, 6)
 
     A, XYZ = sort_atoms(W, A, XYZ)
+
+    save_path = os.path.splitext(csv_file)[0] + ".pt"
+    pickle.dump((G,L,XYZ,A,W), open(save_path, "wb"))
     
     return G, L, XYZ, A, W
 

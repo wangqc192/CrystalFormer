@@ -6,6 +6,7 @@ import optax
 import os
 import multiprocessing
 import math
+import pickle
 
 from crystalformer.src.utils import GLXYZAW_from_file, letter_to_number
 from crystalformer.src.elements import element_dict, element_list
@@ -90,11 +91,23 @@ if args.num_io_process > num_cpu:
 
 ################### Data #############################
 if args.optimizer != "none":
-    train_data = GLXYZAW_from_file(args.train_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
-    valid_data = GLXYZAW_from_file(args.valid_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
+    save_train_path = os.path.splitext(args.train_path)[0] + '.pt'
+    save_val_path = os.path.splitext(args.valid_path)[0] + '.pt'
+    if os.path.isfile(save_train_path):
+        train_data = pickle.load(open(save_train_path, "rb"))
+    else:
+        train_data = GLXYZAW_from_file(args.train_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
+    if os.path.isfile(save_val_path):
+        valid_data = pickle.load(open(save_val_path, "rb"))
+    else:
+        valid_data = GLXYZAW_from_file(args.valid_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
 else:
     assert (args.spacegroup is not None) # for inference we need to specify space group
-    test_data = GLXYZAW_from_file(args.test_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
+    save_test_path = os.path.splitext(args.test_path)[0] + '.pt'
+    if os.path.isfile(save_test_path):
+        train_data = pickle.load(open(save_test_path, "rb"))
+    else:
+        test_data = GLXYZAW_from_file(args.test_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
     
     # jnp.set_printoptions(threshold=jnp.inf)  # print full array 
     constraints = jnp.arange(0, args.n_max, 1)
