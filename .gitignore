@@ -7,3 +7,8 @@ data/*
 *log
 output/*
 *.sh
+crystalformer.egg-info/
+crystalformer/src/.ipynb_checkpoints/
+epoch_010000.pkl
+eval/
+rubbush/
