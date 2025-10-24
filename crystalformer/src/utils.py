@@ -45,8 +45,41 @@ def shuffle(key, data):
     G, L, XYZ, A, W = data
     idx = jax.random.permutation(key, jnp.arange(len(L)))
     return G[idx], L[idx], XYZ[idx], A[idx], W[idx]
+
+def row_to_pyxtal(row):
+    spg = int(row["spg"])
+    a, b, c = row["a"], row["b"], row["c"]
+    alpha, beta, gamma = row["alpha"], row["beta"], row["gamma"]
+
+    spe = ast.literal_eval(row["spe"])  # 例如 ['Li', 'Mn', 'Ir', 'Ir']
+
+    xtal = pyxtal()
+    lattice = Lattice.from_para(a, b, c, alpha, beta, gamma, radians=True)
+    sites = []
+    numIons = []
+
+    for i in range(20):
+        wp_index = int(row[f"wp{i}"])
+        x = float(row[f"x{i}"])
+        y = float(row[f"y{i}"])
+        z = float(row[f"z{i}"])
+        if wp_index != -1:
+            wp = sym.Group(spg)[wp_index]
+            multi = wp.multiplicity
+            wyckoff_symbol = f'{multi}{wp.letter}'
+            site = [{f"{wyckoff_symbol}": [x,y,z]}]
+            #print(site)
+            sites.append(site)
+            numIons.append(multi)
+
+        else:
+            continue
+
+    xtal.build(spg,spe,numIons,lattice,sites)
+
+    return xtal
     
-def process_one(cif, atom_types, wyck_types, n_max, tol=0.01):
+def process_one(row, atom_types, wyck_types, n_max, tol=0.01):
     """
     # taken from https://anonymous.4open.science/r/DiffCSP-PP-8F0D/diffcsp/common/data_utils.py
     Process one cif string to get G, L, XYZ, A, W
@@ -65,20 +98,13 @@ def process_one(cif, atom_types, wyck_types, n_max, tol=0.01):
       A: atom types
       W: wyckoff letters
     """
-    crystal = Structure.from_str(cif, fmt='cif')
-    spga = SpacegroupAnalyzer(crystal, symprec=tol)
-    crystal = spga.get_refined_structure()
-    c = pyxtal()
-    try:
-        c.from_seed(crystal, tol=0.01)
-    except:
-        c.from_seed(crystal, tol=0.0001)
-    
+    c = row_to_pyxtal(row)
+
     g = c.group.number
     num_sites = len(c.atom_sites)
     assert (n_max > num_sites) # we will need at least one empty site for output of L params
 
-    print (g, c.group.symbol, num_sites)
+    #print (g, c.group.symbol, num_sites)
     natoms = 0
     ww = []
     aa = []
@@ -98,13 +124,13 @@ def process_one(cif, atom_types, wyck_types, n_max, tol=0.01):
         ww.append( w )
         fc.append( x )  # the generator of the orbit
         ws.append( symbol )
-        print ('g, a, w, m, symbol, x:', g, a, w, m, symbol, x)
+        #print ('g, a, w, m, symbol, x:', g, a, w, m, symbol, x)
     idx = np.argsort(ww)
     ww = np.array(ww)[idx]
     aa = np.array(aa)[idx]
     fc = np.array(fc)[idx].reshape(num_sites, 3)
     ws = np.array(ws)[idx]
-    print (ws, aa, ww, natoms) 
+    #print (ws, aa, ww, natoms) 
 
     aa = np.concatenate([aa,
                         np.full((n_max - num_sites, ), 0)],
@@ -121,7 +147,7 @@ def process_one(cif, atom_types, wyck_types, n_max, tol=0.01):
     angles = np.array([c.lattice.alpha, c.lattice.beta, c.lattice.gamma])
     l = np.concatenate([abc, angles])
     
-    print ('===================================')
+    #print ('===================================')
 
     return g, l, fc, aa, ww 
 
@@ -144,12 +170,14 @@ def GLXYZAW_from_file(csv_file, atom_types, wyck_types, n_max, num_workers=1):
       A: atom types
       W: wyckoff letters
     """
+    print(f"Load {csv_file}")
     data = pd.read_csv(csv_file)
-    cif_strings = data['cif']
+    print(f"Loaded {csv_file}")
 
     p = multiprocessing.Pool(num_workers)
+    print("Start processing data")
     partial_process_one = partial(process_one, atom_types=atom_types, wyck_types=wyck_types, n_max=n_max)
-    results = p.map_async(partial_process_one, cif_strings).get()
+    results = p.map_async(partial_process_one, data).get()
     p.close()
     p.join()
 
@@ -211,7 +239,7 @@ def GLXA_to_csv(G, L, X, A, num_worker=1, filename='out_structure.csv'):
 if __name__=='__main__':
     atom_types = 119
     wyck_types = 28
-    n_max = 24
+    n_max = 21
 
     import numpy as np 
     np.set_printoptions(threshold=np.inf)
@@ -219,18 +247,18 @@ if __name__=='__main__':
     #csv_file = '../data/mini.csv'
     #csv_file = '/home/wanglei/cdvae/data/carbon_24/val.csv'
     #csv_file = '/home/wanglei/cdvae/data/perov_5/val.csv'
-    csv_file = '/home/wanglei/cdvae/data/mp_20/train.csv'
+    csv_file = '/root/autodl-tmp/CrystalFormer/data/mp_20_aug_V3/train.csv'
 
     G, L, XYZ, A, W = GLXYZAW_from_file(csv_file, atom_types, wyck_types, n_max)
     
-    print (G.shape)
-    print (L.shape)
-    print (XYZ.shape)
-    print (A.shape)
-    print (W.shape)
+#    print (G.shape)
+#    print (L.shape)
+#    print (XYZ.shape)
+#    print (A.shape)
+#    print (W.shape)
     
-    print ('L:\n',L)
-    print ('XYZ:\n',XYZ)
+#    print ('L:\n',L)
+#    print ('XYZ:\n',XYZ)
 
 
     @jax.vmap

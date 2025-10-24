@@ -9,7 +9,7 @@ import itertools
 import argparse
 
 from pymatgen.core import Structure, Lattice
-from wyckoff import wmax_table, mult_table, symops
+from crystalformer.src.wyckoff import wmax_table, mult_table, symops
 
 symops = np.array(symops)
 mult_table = np.array(mult_table)

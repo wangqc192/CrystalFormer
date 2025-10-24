@@ -105,7 +105,7 @@ else:
     assert (args.spacegroup is not None) # for inference we need to specify space group
     save_test_path = os.path.splitext(args.test_path)[0] + '.pt'
     if os.path.isfile(save_test_path):
-        train_data = pickle.load(open(save_test_path, "rb"))
+        test_data = pickle.load(open(save_test_path, "rb"))
     else:
         test_data = GLXYZAW_from_file(args.test_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
     
@@ -274,69 +274,70 @@ else:
     else:
         T1 = args.temperature
 
-    mc_steps = args.nsweeps * args.n_max
-    print("mc_steps", mc_steps)
-    mcmc = make_mcmc_step(params, n_max=args.n_max, atom_types=args.atom_types, atom_mask=atom_mask, constraints=constraints)
-    update_lattice = make_update_lattice(transformer, params, args.atom_types, args.Kl, args.top_p, args.temperature)
+    for g in range(184,231):
+        mc_steps = args.nsweeps * args.n_max
+        print("mc_steps", mc_steps)
+        mcmc = make_mcmc_step(params, n_max=args.n_max, atom_types=args.atom_types, atom_mask=atom_mask, constraints=constraints)
+        update_lattice = make_update_lattice(transformer, params, args.atom_types, args.Kl, args.top_p, args.temperature)
 
-    num_batches = math.ceil(args.num_samples / args.batchsize)
-    name, extension = args.output_filename.rsplit('.', 1)
-    filename = os.path.join(output_path, 
-                            f"{name}_{args.spacegroup}.{extension}")
-    for batch_idx in range(num_batches):
-        start_idx = batch_idx * args.batchsize
-        end_idx = min(start_idx + args.batchsize, args.num_samples)
-        n_sample = end_idx - start_idx
-        key, subkey = jax.random.split(key)
-        XYZ, A, W, M, L = sample_crystal(subkey, transformer, params, args.n_max, n_sample, args.atom_types, args.wyck_types, args.Kx, args.Kl, args.spacegroup, w_mask, atom_mask, args.top_p, args.temperature, T1, constraints)
-
-        G = args.spacegroup * jnp.ones((n_sample), dtype=int)
-        if args.mcmc:
-            x = (G, L, XYZ, A, W)
+        num_batches = math.ceil(args.num_samples / args.batchsize)
+        name, extension = args.output_filename.rsplit('.', 1)
+        filename = os.path.join(output_path, 
+                                f"{name}_{g}.{extension}")
+        for batch_idx in range(num_batches):
+            start_idx = batch_idx * args.batchsize
+            end_idx = min(start_idx + args.batchsize, args.num_samples)
+            n_sample = end_idx - start_idx
             key, subkey = jax.random.split(key)
-            x, acc = mcmc(logp_fn, x_init=x, key=subkey, mc_steps=mc_steps, mc_width=args.mc_width)
-            print("acc", acc)
+            XYZ, A, W, M, L = sample_crystal(subkey, transformer, params, args.n_max, n_sample, args.atom_types, args.wyck_types, args.Kx, args.Kl, g, w_mask, atom_mask, args.top_p, args.temperature, T1, constraints)
 
-            G, L, XYZ, A, W = x
-            key, subkey = jax.random.split(key)
-            L = update_lattice(subkey, G, XYZ, A, W)
+            G = g * jnp.ones((n_sample), dtype=int)
+            if args.mcmc:
+                x = (G, L, XYZ, A, W)
+                key, subkey = jax.random.split(key)
+                x, acc = mcmc(logp_fn, x_init=x, key=subkey, mc_steps=mc_steps, mc_width=args.mc_width)
+                print("acc", acc)
+
+                G, L, XYZ, A, W = x
+                key, subkey = jax.random.split(key)
+                L = update_lattice(subkey, G, XYZ, A, W)
         
-        print ("XYZ:\n", XYZ)  # fractional coordinate 
-        print ("A:\n", A)  # element type
-        print ("W:\n", W)  # Wyckoff positions
-        print ("M:\n", M)  # multiplicity 
-        print ("N:\n", M.sum(axis=-1)) # total number of atoms
-        print ("L:\n", L)  # lattice
-        for a in A:
-           print([element_list[i] for i in a])
+            print ("XYZ:\n", XYZ)  # fractional coordinate 
+            print ("A:\n", A)  # element type
+            print ("W:\n", W)  # Wyckoff positions
+            print ("M:\n", M)  # multiplicity 
+            print ("N:\n", M.sum(axis=-1)) # total number of atoms
+            print ("L:\n", L)  # lattice
+            for a in A:
+                print([element_list[i] for i in a])
 
-        # output L, X, A, W, M, AW to csv file
-        # output logp_w, logp_xyz, logp_a, logp_l to csv file
-        import pandas as pd
-        data = pd.DataFrame()
-        data['L'] = np.array(L).tolist()
-        data['X'] = np.array(XYZ).tolist()
-        data['A'] = np.array(A).tolist()
-        data['W'] = np.array(W).tolist()
-        data['M'] = np.array(M).tolist()
+            # output L, X, A, W, M, AW to csv file
+            # output logp_w, logp_xyz, logp_a, logp_l to csv file
+            import pandas as pd
+            data = pd.DataFrame()
+            data['L'] = np.array(L).tolist()
+            data['X'] = np.array(XYZ).tolist()
+            data['A'] = np.array(A).tolist()
+            data['W'] = np.array(W).tolist()
+            data['M'] = np.array(M).tolist()
 
-        num_atoms = jnp.sum(M, axis=1)
-        length, angle = jnp.split(L, 2, axis=-1)
-        length = length/num_atoms[:, None]**(1/3)
-        angle = angle * (jnp.pi / 180) # to rad
-        L = jnp.concatenate([length, angle], axis=-1)
+            num_atoms = jnp.sum(M, axis=1)
+            length, angle = jnp.split(L, 2, axis=-1)
+            length = length/num_atoms[:, None]**(1/3)
+            angle = angle * (jnp.pi / 180) # to rad
+            L = jnp.concatenate([length, angle], axis=-1)
 
-        # G = args.spacegroup * jnp.ones((n_sample), dtype=int)
-        logp_w, logp_xyz, logp_a, logp_l = jax.jit(logp_fn, static_argnums=7)(params, key, G, L, XYZ, A, W, False)
+            # G = args.spacegroup * jnp.ones((n_sample), dtype=int)
+            logp_w, logp_xyz, logp_a, logp_l = jax.jit(logp_fn, static_argnums=7)(params, key, G, L, XYZ, A, W, False)
 
-        data['logp_w'] = np.array(logp_w).tolist()
-        data['logp_xyz'] = np.array(logp_xyz).tolist()
-        data['logp_a'] = np.array(logp_a).tolist()
-        data['logp_l'] = np.array(logp_l).tolist()
-        data['logp'] = np.array(logp_xyz + args.lamb_w*logp_w + args.lamb_a*logp_a + args.lamb_l*logp_l).tolist()
+            data['logp_w'] = np.array(logp_w).tolist()
+            data['logp_xyz'] = np.array(logp_xyz).tolist()
+            data['logp_a'] = np.array(logp_a).tolist()
+            data['logp_l'] = np.array(logp_l).tolist()
+            data['logp'] = np.array(logp_xyz + args.lamb_w*logp_w + args.lamb_a*logp_a + args.lamb_l*logp_l).tolist()
 
-        data = data.sort_values(by='logp', ascending=False) # sort by logp
-        header = False if os.path.exists(filename) else True
-        data.to_csv(filename, mode='a', index=False, header=header)
+            data = data.sort_values(by='logp', ascending=False) # sort by logp
+            header = False if os.path.exists(filename) else True
+            data.to_csv(filename, mode='a', index=False, header=header)
 
-        print ("Wrote samples to %s"%filename)
+            print (f"Wrote spacegroup {g} samples to {filename}")

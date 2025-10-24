@@ -5,7 +5,7 @@ import smact
 from smact.screening import pauling_test
 
 from config import *
-from elements import element_list
+from crystalformer.src.elements import element_list
 
 # Taken without modification from the original CDVAE repo (https://github.com/txie-93/cdvae)
 # But delete the unused functions
