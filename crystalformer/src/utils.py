@@ -7,11 +7,18 @@ from pymatgen.core import Structure, Lattice
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
 from functools import partial
 import multiprocessing
+from joblib import Parallel, delayed
+from tqdm import tqdm
 import os
 import pickle
 
 from crystalformer.src.wyckoff import mult_table
 from crystalformer.src.elements import element_list
+
+from pyxtal.lattice import Lattice
+from pyxtal.wyckoff_site import Wyckoff_position
+import ast
+import pyxtal.symmetry as sym
 
 @jax.vmap
 def sort_atoms(W, A, X):
@@ -144,7 +151,7 @@ def process_one(row, atom_types, wyck_types, n_max, tol=0.01):
                         axis=0)
     
     abc = np.array([c.lattice.a, c.lattice.b, c.lattice.c])/natoms**(1./3.)
-    angles = np.array([c.lattice.alpha, c.lattice.beta, c.lattice.gamma])
+    angles = np.array([c.lattice.alpha, c.lattice.beta, c.lattice.gamma]) * 180 / np.pi
     l = np.concatenate([abc, angles])
     
     #print ('===================================')
@@ -174,12 +181,14 @@ def GLXYZAW_from_file(csv_file, atom_types, wyck_types, n_max, num_workers=1):
     data = pd.read_csv(csv_file)
     print(f"Loaded {csv_file}")
 
-    p = multiprocessing.Pool(num_workers)
     print("Start processing data")
-    partial_process_one = partial(process_one, atom_types=atom_types, wyck_types=wyck_types, n_max=n_max)
-    results = p.map_async(partial_process_one, data).get()
-    p.close()
-    p.join()
+    results = Parallel(num_workers, backend="multiprocessing")(
+            delayed(process_one)(
+                data.iloc[i], atom_types=atom_types, wyck_types=wyck_types, n_max=n_max
+                ) 
+            for i in tqdm(range(len(data))
+                    )
+                )
 
     G, L, XYZ, A, W = zip(*results)
 
