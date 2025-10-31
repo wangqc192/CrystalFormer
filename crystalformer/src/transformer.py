@@ -13,10 +13,7 @@ def make_transformer(key, Nf, Kx, Kl, n_max, h0_size, num_layers, num_heads, key
     
     coord_types = 3*Kx
     lattice_types = Kl+2*6*Kl
-    if with_lx:
-        output_size = np.max(np.array([atom_types+lattice_types, coord_types, wyck_types]))
-    else:
-        output_size = np.max(np.array([atom_types, wyck_types]))
+    output_size = np.max(np.array([atom_types+lattice_types, coord_types, wyck_types]))
         
 
     def renormalize(h_x):
@@ -46,6 +43,8 @@ def make_transformer(key, Nf, Kx, Kl, n_max, h0_size, num_layers, num_heads, key
         assert (XYZ.shape[1] == 3)
 
         n = XYZ.shape[0]
+        if not with_lx:
+            XYZ = jnp.zeros((n, 3), dtype=int) 
         X, Y, Z = XYZ[:, 0], XYZ[:, 1], XYZ[:,2]
 
         w_max = wmax_table[G-1]

@@ -188,7 +188,7 @@ params, transformer = make_transformer(key, args.Nf, args.Kx, args.Kl, args.n_ma
                                       args.transformer_layers, args.num_heads, 
                                       args.key_size, args.model_size, args.embed_size, 
                                       args.atom_types, args.wyck_types,
-                                      args.dropout_rate,with_lx)
+                                      args.dropout_rate, with_lx=with_lx)
 transformer_name = 'Nf_%d_Kx_%d_Kl_%d_h0_%d_l_%d_H_%d_k_%d_m_%d_e_%d_drop_%g'%(args.Nf, args.Kx, args.Kl, args.h0_size, args.transformer_layers, args.num_heads, args.key_size, args.model_size, args.embed_size, args.dropout_rate)
 
 print ("# of transformer params", ravel_pytree(params)[0].size) 
