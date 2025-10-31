@@ -9,11 +9,15 @@ import numpy as np
 from crystalformer.src.attention import MultiHeadAttention
 from crystalformer.src.wyckoff import wmax_table, dof0_table
 
-def make_transformer(key, Nf, Kx, Kl, n_max, h0_size, num_layers, num_heads, key_size, model_size, embed_size, atom_types, wyck_types, dropout_rate, widening_factor=4, sigmamin=1e-3):
+def make_transformer(key, Nf, Kx, Kl, n_max, h0_size, num_layers, num_heads, key_size, model_size, embed_size, atom_types, wyck_types, dropout_rate, widening_factor=4, sigmamin=1e-3, with_lx=True):
     
     coord_types = 3*Kx
     lattice_types = Kl+2*6*Kl
-    output_size = np.max(np.array([atom_types+lattice_types, coord_types, wyck_types]))
+    if with_lx:
+        output_size = np.max(np.array([atom_types+lattice_types, coord_types, wyck_types]))
+    else:
+        output_size = np.max(np.array([atom_types, wyck_types]))
+        
 
     def renormalize(h_x):
         n = h_x.shape[0]
