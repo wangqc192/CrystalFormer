@@ -37,6 +37,7 @@ group = parser.add_argument_group('dataset')
 group.add_argument('--train_path', default='/home/wanglei/cdvae/data/mp_20/train.csv', help='')
 group.add_argument('--valid_path', default='/home/wanglei/cdvae/data/mp_20/val.csv', help='')
 group.add_argument('--test_path', default='/home/wanglei/cdvae/data/mp_20/test.csv', help='')
+group.add_argument('--is_cif', action='store_true', help="the data to be processed is cif")
 
 group = parser.add_argument_group('transformer parameters')
 group.add_argument('--Nf', type=int, default=5, help='number of frequencies for fc')
@@ -54,6 +55,7 @@ group = parser.add_argument_group('loss parameters')
 group.add_argument("--lamb_a", type=float, default=1.0, help="weight for the a part relative to fc")
 group.add_argument("--lamb_w", type=float, default=1.0, help="weight for the w part relative to fc")
 group.add_argument("--lamb_l", type=float, default=1.0, help="weight for the lattice part relative to fc")
+group.add_argument("--lamb_xyz", type=float, default=1.0, help="weight for the xyz part relative to fc")
 
 group = parser.add_argument_group('physics parameters')
 group.add_argument('--n_max', type=int, default=21, help='The maximum number of atoms in the cell')
@@ -96,18 +98,18 @@ if args.optimizer != "none":
     if os.path.isfile(save_train_path):
         train_data = pickle.load(open(save_train_path, "rb"))
     else:
-        train_data = GLXYZAW_from_file(args.train_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
+        train_data = GLXYZAW_from_file(args.train_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
     if os.path.isfile(save_val_path):
         valid_data = pickle.load(open(save_val_path, "rb"))
     else:
-        valid_data = GLXYZAW_from_file(args.valid_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
+        valid_data = GLXYZAW_from_file(args.valid_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
 else:
     assert (args.spacegroup is not None) # for inference we need to specify space group
     save_test_path = os.path.splitext(args.test_path)[0] + '.pt'
     if os.path.isfile(save_test_path):
         test_data = pickle.load(open(save_test_path, "rb"))
     else:
-        test_data = GLXYZAW_from_file(args.test_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process)
+        test_data = GLXYZAW_from_file(args.test_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
     
     # jnp.set_printoptions(threshold=jnp.inf)  # print full array 
     constraints = jnp.arange(0, args.n_max, 1)
@@ -175,12 +177,18 @@ else:
         w_mask = None
 
 ################### Model #############################
+if args.lamb_xyz==0 and args.lamb_l ==0:
+    with_lx = False
+else:
+    with_lx = True
+print("the model is trainning without the params of lattice and coordinate ", with_lx)
+    
 params, transformer = make_transformer(key, args.Nf, args.Kx, args.Kl, args.n_max, 
                                       args.h0_size, 
                                       args.transformer_layers, args.num_heads, 
                                       args.key_size, args.model_size, args.embed_size, 
                                       args.atom_types, args.wyck_types,
-                                      args.dropout_rate)
+                                      args.dropout_rate,with_lx)
 transformer_name = 'Nf_%d_Kx_%d_Kl_%d_h0_%d_l_%d_H_%d_k_%d_m_%d_e_%d_drop_%g'%(args.Nf, args.Kx, args.Kl, args.h0_size, args.transformer_layers, args.num_heads, args.key_size, args.model_size, args.embed_size, args.dropout_rate)
 
 print ("# of transformer params", ravel_pytree(params)[0].size) 

@@ -86,7 +86,7 @@ def row_to_pyxtal(row):
 
     return xtal
     
-def process_one(row, atom_types, wyck_types, n_max, tol=0.01):
+def process_one(row, atom_types, wyck_types, n_max, tol=0.01, is_cif=True):
     """
     # taken from https://anonymous.4open.science/r/DiffCSP-PP-8F0D/diffcsp/common/data_utils.py
     Process one cif string to get G, L, XYZ, A, W
@@ -105,7 +105,19 @@ def process_one(row, atom_types, wyck_types, n_max, tol=0.01):
       A: atom types
       W: wyckoff letters
     """
-    c = row_to_pyxtal(row)
+    if is_cif:
+        cif = row["cif"]
+        try: crystal = Structure.from_str(cif, fmt='cif')
+        except: crystal = Structure.from_dict(eval(cif))
+        spga = SpacegroupAnalyzer(crystal, symprec=tol)
+        crystal = spga.get_refined_structure()
+        c = pyxtal()
+        try:
+            c.from_seed(crystal, tol=0.01)
+        except:
+            c.from_seed(crystal, tol=0.0001)
+    else:
+        c = row_to_pyxtal(row)
 
     g = c.group.number
     num_sites = len(c.atom_sites)
@@ -158,7 +170,7 @@ def process_one(row, atom_types, wyck_types, n_max, tol=0.01):
 
     return g, l, fc, aa, ww 
 
-def GLXYZAW_from_file(csv_file, atom_types, wyck_types, n_max, num_workers=1):
+def GLXYZAW_from_file(csv_file, atom_types, wyck_types, n_max, num_workers=1, is_cif=True):
     """
     Read cif strings from csv file and convert them to G, L, XYZ, A, W
     Note that cif strings must be in the column 'cif'
@@ -184,7 +196,7 @@ def GLXYZAW_from_file(csv_file, atom_types, wyck_types, n_max, num_workers=1):
     print("Start processing data")
     results = Parallel(num_workers, backend="multiprocessing")(
             delayed(process_one)(
-                data.iloc[i], atom_types=atom_types, wyck_types=wyck_types, n_max=n_max
+                data.iloc[i], atom_types=atom_types, wyck_types=wyck_types, n_max=n_max, is_cif=is_cif
                 ) 
             for i in tqdm(range(len(data))
                     )
