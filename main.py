@@ -181,7 +181,7 @@ if args.lamb_xyz==0 and args.lamb_l ==0:
     with_lx = False
 else:
     with_lx = True
-print("the model is trainning without the params of lattice and coordinate ", with_lx)
+print("the model is trainning with the params of lattice and coordinate ", with_lx)
     
 params, transformer = make_transformer(key, args.Nf, args.Kx, args.Kl, args.n_max, 
                                       args.h0_size, 
