@@ -202,7 +202,7 @@ if args.optimizer != "none" or args.restore_path is None:
     output_path = args.folder + args.optimizer+"_bs_%d_lr_%g_decay_%g_clip_%g" % (args.batchsize, args.lr, args.lr_decay, args.clip_grad) \
                    + '_A_%g_W_%g_N_%g'%(args.atom_types, args.wyck_types, args.n_max) \
                    + ("_wd_%g"%(args.weight_decay) if args.optimizer == "adamw" else "") \
-                   + ('_a_%g_w_%g_l_%g'%(args.lamb_a, args.lamb_w, args.lamb_l)) \
+                   + ('_a_%g_w_%g_l_%g_%g'%(args.lamb_a, args.lamb_w, args.lamb_l, args.lamb_xyz)) \
                    +  "_" + transformer_name 
 
     os.makedirs(output_path, exist_ok=True)
