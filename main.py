@@ -181,7 +181,7 @@ if args.lamb_xyz==0 and args.lamb_l ==0:
     with_lx = False
 else:
     with_lx = True
-print("the model is trainning without the params of lattice and coordinate ", with_lx)
+print("the model is trainning with the params of lattice and coordinate ", with_lx)
     
 params, transformer = make_transformer(key, args.Nf, args.Kx, args.Kl, args.n_max, 
                                       args.h0_size, 
@@ -195,14 +195,14 @@ print ("# of transformer params", ravel_pytree(params)[0].size)
 
 ################### Train #############################
 
-loss_fn, logp_fn = make_loss_fn(args.n_max, args.atom_types, args.wyck_types, args.Kx, args.Kl, transformer, args.lamb_a, args.lamb_w, args.lamb_l)
+loss_fn, logp_fn = make_loss_fn(args.n_max, args.atom_types, args.wyck_types, args.Kx, args.Kl, transformer,args.lamb_xyz, args.lamb_a, args.lamb_w, args.lamb_l)
 
 print("\n========== Prepare logs ==========")
 if args.optimizer != "none" or args.restore_path is None:
     output_path = args.folder + args.optimizer+"_bs_%d_lr_%g_decay_%g_clip_%g" % (args.batchsize, args.lr, args.lr_decay, args.clip_grad) \
                    + '_A_%g_W_%g_N_%g'%(args.atom_types, args.wyck_types, args.n_max) \
                    + ("_wd_%g"%(args.weight_decay) if args.optimizer == "adamw" else "") \
-                   + ('_a_%g_w_%g_l_%g'%(args.lamb_a, args.lamb_w, args.lamb_l)) \
+                   + ('_x%g_a_%g_w_%g_l_%g'%(args.lamb_xyz, args.lamb_a, args.lamb_w, args.lamb_l)) \
                    +  "_" + transformer_name 
 
     os.makedirs(output_path, exist_ok=True)
