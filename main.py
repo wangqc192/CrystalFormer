@@ -282,7 +282,8 @@ else:
     else:
         T1 = args.temperature
 
-    for g in range(184,231):
+    #for g in [2,12,62,139,166,194,225, 17,48,50,158,151,184,185,188]:
+    for g in range(1,231):
         mc_steps = args.nsweeps * args.n_max
         print("mc_steps", mc_steps)
         mcmc = make_mcmc_step(params, n_max=args.n_max, atom_types=args.atom_types, atom_mask=atom_mask, constraints=constraints)
