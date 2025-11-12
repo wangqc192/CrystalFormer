@@ -119,6 +119,12 @@ def train(key, optimizer, opt_state, loss_fn, params, epoch_finished, epochs, ba
             train_loss_w, train_loss_a, train_loss_xyz, train_loss_l = train_aux
             valid_loss_w, valid_loss_a, valid_loss_xyz, valid_loss_l = valid_aux
 
+            print(f"{epoch=}")
+            print("----------------train loss----------------------")
+            print(train_loss_w, train_loss_a, train_loss_xyz, train_loss_l)
+            print("----------------val loss----------------------")
+            print(valid_loss_w, valid_loss_a, valid_loss_xyz, valid_loss_l)
+
             f.write( ("%6d" + 10*"  %.6f" + "\n") % (epoch, 
                                                     train_loss,   valid_loss,
                                                     train_loss_w, valid_loss_w, 
