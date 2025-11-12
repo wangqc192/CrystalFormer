@@ -30,13 +30,11 @@ group.add_argument('--weight_decay', type=float, default=0.0, help='weight decay
 group.add_argument('--clip_grad', type=float, default=1.0, help='clip gradient')
 group.add_argument("--optimizer", type=str, default="adam", choices=["none", "adam", "adamw"], help="optimizer type")
 
-group.add_argument("--folder", default="../data/", help="the folder to save data")
+group.add_argument("--folder", default="../output", help="the folder to save data")
 group.add_argument("--restore_path", default=None, help="checkpoint path or file")
 
 group = parser.add_argument_group('dataset')
-group.add_argument('--train_path', default='/home/wanglei/cdvae/data/mp_20/train.csv', help='')
-group.add_argument('--valid_path', default='/home/wanglei/cdvae/data/mp_20/val.csv', help='')
-group.add_argument('--test_path', default='/home/wanglei/cdvae/data/mp_20/test.csv', help='')
+group.add_argument('--dataset', default='mp20', help='the data used to train the model')
 group.add_argument('--is_cif', action='store_true', help="the data to be processed is cif")
 
 group = parser.add_argument_group('transformer parameters')
@@ -93,23 +91,26 @@ if args.num_io_process > num_cpu:
 
 ################### Data #############################
 if args.optimizer != "none":
-    save_train_path = os.path.splitext(args.train_path)[0] + '.pt'
-    save_val_path = os.path.splitext(args.valid_path)[0] + '.pt'
+    train_path = '../data/' + args.dataset + '/train.csv'
+    val_path = '../data/' + args.dataset + '/val.csv'
+    save_train_path = '../data/' + args.dataset  + '/train.pt'
+    save_val_path = '../data/' + args.dataset  + '/val.pt'
     if os.path.isfile(save_train_path):
         train_data = pickle.load(open(save_train_path, "rb"))
     else:
-        train_data = GLXYZAW_from_file(args.train_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
+        train_data = GLXYZAW_from_file(train_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
     if os.path.isfile(save_val_path):
         valid_data = pickle.load(open(save_val_path, "rb"))
     else:
-        valid_data = GLXYZAW_from_file(args.valid_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
+        valid_data = GLXYZAW_from_file(valid_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
 else:
     assert (args.spacegroup is not None) # for inference we need to specify space group
-    save_test_path = os.path.splitext(args.test_path)[0] + '.pt'
+    test_path = '../data/' + args.dataset + '/test.csv'
+    save_test_path = '../data/' + args.dataset  + '/test.pt'
     if os.path.isfile(save_test_path):
         test_data = pickle.load(open(save_test_path, "rb"))
     else:
-        test_data = GLXYZAW_from_file(args.test_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
+        test_data = GLXYZAW_from_file(test_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
     
     # jnp.set_printoptions(threshold=jnp.inf)  # print full array 
     constraints = jnp.arange(0, args.n_max, 1)
@@ -189,7 +190,7 @@ params, transformer = make_transformer(key, args.Nf, args.Kx, args.Kl, args.n_ma
                                       args.key_size, args.model_size, args.embed_size, 
                                       args.atom_types, args.wyck_types,
                                       args.dropout_rate, with_lx=with_lx)
-transformer_name = 'Nf_%d_Kx_%d_Kl_%d_h0_%d_l_%d_H_%d_k_%d_m_%d_e_%d_drop_%g'%(args.Nf, args.Kx, args.Kl, args.h0_size, args.transformer_layers, args.num_heads, args.key_size, args.model_size, args.embed_size, args.dropout_rate)
+transformer_name = 'Nf%d-Kx%d-Kl%d-h0%d-Tl%d-H%d-Ks%d-Ms%d-Es%d-drop%g'%(args.Nf, args.Kx, args.Kl, args.h0_size, args.transformer_layers, args.num_heads, args.key_size, args.model_size, args.embed_size, args.dropout_rate)
 
 print ("# of transformer params", ravel_pytree(params)[0].size) 
 
@@ -199,11 +200,16 @@ loss_fn, logp_fn = make_loss_fn(args.n_max, args.atom_types, args.wyck_types, ar
 
 print("\n========== Prepare logs ==========")
 if args.optimizer != "none" or args.restore_path is None:
-    output_path = args.folder + args.optimizer+"_bs_%d_lr_%g_decay_%g_clip_%g" % (args.batchsize, args.lr, args.lr_decay, args.clip_grad) \
-                   + '_A_%g_W_%g_N_%g'%(args.atom_types, args.wyck_types, args.n_max) \
-                   + ("_wd_%g"%(args.weight_decay) if args.optimizer == "adamw" else "") \
-                   + ('_x%g_a_%g_w_%g_l_%g'%(args.lamb_xyz, args.lamb_a, args.lamb_w, args.lamb_l)) \
-                   +  "_" + transformer_name 
+    if args.lamb_xyz==1 & args.lamb_a==1 & args.lamb_w==1 & args.lamb_l==1:
+        loss_weight = 1
+    elif args.lamb_xyz==10 & args.lamb_a==1 & args.lamb_w==1 & args.lamb_l==10:
+        loss_weight = 2
+        
+    output_path = args.folder + "DS%d-"%(args.dataset) + args.optimizer+"-BS%d-LR%g-WD%g-clip%g" % (args.batchsize, args.lr, args.lr_decay, args.clip_grad) \
+                   + '-A%g-W%g-N%g'%(args.atom_types, args.wyck_types, args.n_max) \
+                   + ("-WD%g"%(args.weight_decay) if args.optimizer == "adamw" else "") \
+                   + ('-LW'%(loss_weight)) \
+                   +  "-" + transformer_name 
 
     os.makedirs(output_path, exist_ok=True)
     print("Create directory for output: %s" % output_path)
