@@ -30,7 +30,7 @@ group.add_argument('--weight_decay', type=float, default=0.0, help='weight decay
 group.add_argument('--clip_grad', type=float, default=1.0, help='clip gradient')
 group.add_argument("--optimizer", type=str, default="adam", choices=["none", "adam", "adamw"], help="optimizer type")
 
-group.add_argument("--folder", default="../output", help="the folder to save data")
+group.add_argument("--folder", default="../output/", help="the folder to save data")
 group.add_argument("--restore_path", default=None, help="checkpoint path or file")
 
 group = parser.add_argument_group('dataset')
@@ -102,7 +102,7 @@ if args.optimizer != "none":
     if os.path.isfile(save_val_path):
         valid_data = pickle.load(open(save_val_path, "rb"))
     else:
-        valid_data = GLXYZAW_from_file(valid_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
+        valid_data = GLXYZAW_from_file(val_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
 else:
     assert (args.spacegroup is not None) # for inference we need to specify space group
     test_path = '../data/' + args.dataset + '/test.csv'
@@ -200,15 +200,15 @@ loss_fn, logp_fn = make_loss_fn(args.n_max, args.atom_types, args.wyck_types, ar
 
 print("\n========== Prepare logs ==========")
 if args.optimizer != "none" or args.restore_path is None:
-    if args.lamb_xyz==1 & args.lamb_a==1 & args.lamb_w==1 & args.lamb_l==1:
+    if args.lamb_xyz==1 and args.lamb_a==1 and args.lamb_w==1 and args.lamb_l==1:
         loss_weight = 1
-    elif args.lamb_xyz==10 & args.lamb_a==1 & args.lamb_w==1 & args.lamb_l==10:
+    elif args.lamb_xyz==10 and args.lamb_a==1 and args.lamb_w==1 and args.lamb_l==10:
         loss_weight = 2
         
-    output_path = args.folder + "DS%d-"%(args.dataset) + args.optimizer+"-BS%d-LR%g-WD%g-clip%g" % (args.batchsize, args.lr, args.lr_decay, args.clip_grad) \
+    output_path = args.folder + f"DS{args.dataset}-" + args.optimizer+"-BS%d-LR%g-WD%g-clip%g" % (args.batchsize, args.lr, args.lr_decay, args.clip_grad) \
                    + '-A%g-W%g-N%g'%(args.atom_types, args.wyck_types, args.n_max) \
                    + ("-WD%g"%(args.weight_decay) if args.optimizer == "adamw" else "") \
-                   + ('-LW'%(loss_weight)) \
+                   + ('-LW%d'%(loss_weight)) \
                    +  "-" + transformer_name 
 
     os.makedirs(output_path, exist_ok=True)
