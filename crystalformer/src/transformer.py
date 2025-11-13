@@ -5,9 +5,11 @@ import jax
 import jax.numpy as jnp
 import haiku as hk
 import numpy as np
+import gzip
+import pickle
 
 from crystalformer.src.attention import MultiHeadAttention
-from crystalformer.src.wyckoff import wmax_table, dof0_table
+from crystalformer.src.wyckoff import wmax_table, dof0_table, ss_num_mapping
 
 def make_transformer(key, Nf, Kx, Kl, n_max, h0_size, num_layers, num_heads, key_size, model_size, embed_size, atom_types, wyck_types, dropout_rate, widening_factor=4, sigmamin=1e-3, with_lx=True):
     
@@ -46,12 +48,23 @@ def make_transformer(key, Nf, Kx, Kl, n_max, h0_size, num_layers, num_heads, key
         if not with_lx:
             XYZ = jnp.zeros((n, 3), dtype=int) 
         X, Y, Z = XYZ[:, 0], XYZ[:, 1], XYZ[:,2]
+        ss_embed_size = embed_size*7//8
+        w_idx_embed_size = embed_size - ss_embed_size
+        
+        
 
         w_max = wmax_table[G-1]
+        ss, w_idx = wyckoff_decompose(W)
         initializer = hk.initializers.TruncatedNormal(0.01)
         
         g_embeddings = hk.get_parameter('g_embeddings', [230, embed_size], init=initializer)[G-1]
-        w_embeddings = hk.get_parameter('w_embeddings', [wyck_types, embed_size], init=initializer)[W]
+        #w_embeddings = hk.get_parameter('w_embeddings', [wyck_types, embed_size], init=initializer)[W]
+        ss_embeddings = hk.get_parameter('ss_embeddings', [82, ss_embed_size], init=initializer)[ss]
+        w_idx_embeddings = hk.get_parameter('idx_embeddings', [8, w_idx_embed_size], init=initializer)[w_idx]
+        w_embeddings = jnp.concatenate([ss_embeddings,w_idx_embeddings], axis=-1)
+        w_embeddings = jnp.concatenate([w_embeddings, jnp.zeros(((n-ss.shape[0]),embed_size))], axis=0)
+
+    
         a_embeddings = hk.get_parameter('a_embeddings', [atom_types, embed_size], init=initializer)[A]
 
         if h0_size >0:
@@ -242,3 +255,17 @@ def _layer_norm(x: jax.Array) -> jax.Array:
     """Applies a unique LayerNorm to `x` with default settings."""
     ln = hk.LayerNorm(axis=-1, create_scale=True, create_offset=True)
     return ln(x)
+
+with gzip.open("/home/wangqc/project/WyckoffTransformer/cache/wychoffs_enumerated_by_ss.pkl.gz", "rb") as f:
+    wychoffs_enumerated_by_ss = pickle.load(f)
+def spg_nu_to_ss_enum(spg,num):
+    letter = chr((num-1) % 26 + (97 if num < 26 else 65))
+    ss = wychoffs_enumerated_by_ss[2][spg][letter]
+    ss = ss_num_mapping[ss]
+    idx = wychoffs_enumerated_by_ss[0][spg][letter]
+    return ss, idx
+def wyckoff_decompose(spg, W):
+    pairs = [(spg_nu_to_ss_enum(spg, w)) for w in W if w != 0]
+    ss = jnp.array(list(zip(*pairs))[0])
+    idx = jnp.array(list(zip(*pairs))[1])
+    return ss, idx
