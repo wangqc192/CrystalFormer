@@ -39,8 +39,8 @@ def make_loss_fn(n_max, atom_types, wyck_types, Kx, Kl, transformer, lamb_xyz = 
 
         return logp_x
 
-    @partial(jax.vmap, in_axes=(None, None, 0, 0, 0, 0, 0, None), out_axes=0) # batch 
-    def logp_fn(params, key, G, L, XYZ, A, W, is_train):
+    @partial(jax.vmap, in_axes=(None, None, 0, 0, 0, 0, 0, 0, 0, None), out_axes=0) # batch 
+    def logp_fn(params, key, G, L, XYZ, A, W, S, I, is_train):
         '''
         G: scalar 
         L: (6,) [a, b, c, alpha, beta, gamma] 
@@ -53,7 +53,7 @@ def make_loss_fn(n_max, atom_types, wyck_types, Kx, Kl, transformer, lamb_xyz = 
         M = mult_table[G-1, W]  # (n_max,) multplicities
         #num_atoms = jnp.sum(M)
 
-        h = transformer(params, key, G, XYZ, A, W, M, is_train) # (5*n_max+1, ...)
+        h = transformer(params, key, G, XYZ, A, W, M, S, I, is_train) # (5*n_max+1, ...)
         w_logit = h[0::5, :wyck_types] # (n_max+1, wyck_types) 
         w_logit = w_logit[:-1] # (n_max, wyck_types)
         a_logit = h[1::5, :atom_types] 
@@ -83,8 +83,8 @@ def make_loss_fn(n_max, atom_types, wyck_types, Kx, Kl, transformer, lamb_xyz = 
         
         return logp_w, logp_xyz, logp_a, logp_l
 
-    def loss_fn(params, key, G, L, XYZ, A, W, is_train):
-        logp_w, logp_xyz, logp_a, logp_l = logp_fn(params, key, G, L, XYZ, A, W, is_train)
+    def loss_fn(params, key, G, L, XYZ, A, W, S, I, is_train):
+        logp_w, logp_xyz, logp_a, logp_l = logp_fn(params, key, G, L, XYZ, A, W, S, I, is_train)
         loss_w = -jnp.mean(logp_w)
         loss_xyz = -jnp.mean(logp_xyz)
         loss_a = -jnp.mean(logp_a)

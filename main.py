@@ -48,6 +48,7 @@ group.add_argument('--key_size', type=int, default=64, help='The key size')
 group.add_argument('--model_size', type=int, default=64, help='The model size')
 group.add_argument('--embed_size', type=int, default=32, help='The enbedding size')
 group.add_argument('--dropout_rate', type=float, default=0.5, help='The dropout rate')
+group.add_argument('--type_emb', default='l_emb', help='the emb way of wyckoff position, you can use si_emb, l_emb')
 
 group = parser.add_argument_group('loss parameters')
 group.add_argument("--lamb_a", type=float, default=1.0, help="weight for the a part relative to fc")
@@ -189,7 +190,7 @@ params, transformer = make_transformer(key, args.Nf, args.Kx, args.Kl, args.n_ma
                                       args.transformer_layers, args.num_heads, 
                                       args.key_size, args.model_size, args.embed_size, 
                                       args.atom_types, args.wyck_types,
-                                      args.dropout_rate, with_lx=with_lx)
+                                      args.dropout_rate, with_lx=with_lx, type_emb=args.type_emb)
 transformer_name = 'Nf%d-Kx%d-Kl%d-h0%d-Tl%d-H%d-Ks%d-Ms%d-Es%d-drop%g'%(args.Nf, args.Kx, args.Kl, args.h0_size, args.transformer_layers, args.num_heads, args.key_size, args.model_size, args.embed_size, args.dropout_rate)
 
 print ("# of transformer params", ravel_pytree(params)[0].size) 
@@ -209,7 +210,8 @@ if args.optimizer != "none" or args.restore_path is None:
                    + '-A%g-W%g-N%g'%(args.atom_types, args.wyck_types, args.n_max) \
                    + ("-WD%g"%(args.weight_decay) if args.optimizer == "adamw" else "") \
                    + ('-LW%d'%(loss_weight)) \
-                   +  "-" + transformer_name 
+                   +  "-" + transformer_name \
+                   + "-TE%d" %(1 if args.type_emb=="l_emb" else 2) 
 
     os.makedirs(output_path, exist_ok=True)
     print("Create directory for output: %s" % output_path)
