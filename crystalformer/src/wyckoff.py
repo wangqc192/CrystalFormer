@@ -138,6 +138,15 @@ ss_num_mapping = {'.-3.': 0, '..m': 1, '.-3m': 2, '..2': 3, 'm..': 4, '222.': 5,
                   '-6..': 69, '-42.m': 70, 'mmm.': 71, 'mm2.': 72, 'm.mm': 73, 'm.m2': 74, '-3..': 75, '-42m': 76, '-4m.2': 77, '322': 78,
                   '.2.': 79, '622': 80, '4/mmm': 81}
 
+import gzip
+import pickle
+with gzip.open("/home/wangqc/project/WyckoffTransformer/cache/wychoffs_enumerated_by_ss.pkl.gz", "rb") as f:
+    wychoffs_enumerated_by_ss = pickle.load(f)
+
+ss_mapping = [wychoffs_enumerated_by_ss[2][i] for i in range(1,231)]
+ss_idx_mapping = [wychoffs_enumerated_by_ss[0][i] for i in range(1,231)]
+
+    
 if __name__=='__main__':
     print (symops.shape)
     print (symops.size*symops.dtype.itemsize//(1024*1024))

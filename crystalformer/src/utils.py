@@ -19,6 +19,7 @@ from pyxtal.lattice import Lattice
 from pyxtal.wyckoff_site import Wyckoff_position
 import ast
 import pyxtal.symmetry as sym
+from crystalformer.src.wyckoff import ss_mapping, ss_idx_mapping, ss_num_mapping
 
 @jax.vmap
 def sort_atoms(W, A, X):
@@ -49,9 +50,9 @@ def shuffle(key, data):
     """
     shuffle data along batch dimension
     """
-    G, L, XYZ, A, W = data
+    G, L, XYZ, A, W, S, I = data
     idx = jax.random.permutation(key, jnp.arange(len(L)))
-    return G[idx], L[idx], XYZ[idx], A[idx], W[idx]
+    return G[idx], L[idx], XYZ[idx], A[idx], W[idx], S[idx], I[idx]
 
 def row_to_pyxtal(row):
     spg = int(row["spg"])
@@ -129,11 +130,16 @@ def process_one(row, atom_types, wyck_types, n_max, tol=0.01, is_cif=True):
     aa = []
     fc = []
     ws = []
+    ss = []
+    ii = []
     for site in c.atom_sites:
         a = element_list.index(site.specie) 
         x = site.position
         m = site.wp.multiplicity
         w = letter_to_number(site.wp.letter)
+        s = ss_mapping[g-1][site.wp.letter]
+        s = ss_num_mapping[s]
+        i = ss_idx_mapping[g-1][site.wp.letter]
         symbol = str(m) + site.wp.letter
         natoms += site.wp.multiplicity
         assert (a < atom_types)
@@ -143,12 +149,16 @@ def process_one(row, atom_types, wyck_types, n_max, tol=0.01, is_cif=True):
         ww.append( w )
         fc.append( x )  # the generator of the orbit
         ws.append( symbol )
+        ss.append(s)
+        ii.append(i)
         #print ('g, a, w, m, symbol, x:', g, a, w, m, symbol, x)
     idx = np.argsort(ww)
     ww = np.array(ww)[idx]
     aa = np.array(aa)[idx]
     fc = np.array(fc)[idx].reshape(num_sites, 3)
     ws = np.array(ws)[idx]
+    ss = np.array(ss)[idx]
+    ii = np.array(ii)[idx]
     #print (ws, aa, ww, natoms) 
 
     aa = np.concatenate([aa,
@@ -161,6 +171,15 @@ def process_one(row, atom_types, wyck_types, n_max, tol=0.01, is_cif=True):
     fc = np.concatenate([fc, 
                          np.full((n_max - num_sites, 3), 1e10)],
                         axis=0)
+
+    ss = np.concatenate([ss,
+                        np.full((n_max - num_sites, ), -1)],
+                        axis=0)
+    
+    ii = np.concatenate([ii,
+                        np.full((n_max - num_sites, ), -1)],
+                        axis=0)
+
     
     abc = np.array([c.lattice.a, c.lattice.b, c.lattice.c])/natoms**(1./3.)
     angles = np.array([c.lattice.alpha, c.lattice.beta, c.lattice.gamma]) * 180 / np.pi
@@ -168,7 +187,7 @@ def process_one(row, atom_types, wyck_types, n_max, tol=0.01, is_cif=True):
     
     #print ('===================================')
 
-    return g, l, fc, aa, ww 
+    return g, l, fc, aa, ww, ss, ii 
 
 def GLXYZAW_from_file(csv_file, atom_types, wyck_types, n_max, num_workers=1, is_cif=True):
     """
@@ -202,20 +221,22 @@ def GLXYZAW_from_file(csv_file, atom_types, wyck_types, n_max, num_workers=1, is
                     )
                 )
 
-    G, L, XYZ, A, W = zip(*results)
+    G, L, XYZ, A, W, S, I = zip(*results)
 
     G = jnp.array(G) 
     A = jnp.array(A).reshape(-1, n_max)
     W = jnp.array(W).reshape(-1, n_max)
     XYZ = jnp.array(XYZ).reshape(-1, n_max, 3)
     L = jnp.array(L).reshape(-1, 6)
+    S = jnp.array(S).reshape(-1, n_max)
+    I = jnp.array(I).reshape(-1, n_max)
 
     A, XYZ = sort_atoms(W, A, XYZ)
 
     save_path = os.path.splitext(csv_file)[0] + ".pt"
-    pickle.dump((G,L,XYZ,A,W), open(save_path, "wb"))
+    pickle.dump((G,L,XYZ,A,W,S,I), open(save_path, "wb"))
     
-    return G, L, XYZ, A, W
+    return G, L, XYZ, A, W, S, I
 
 def GLXA_to_structure_single(G, L, X, A):
     """
