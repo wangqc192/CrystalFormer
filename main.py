@@ -262,7 +262,7 @@ else:
     import numpy as np 
     np.set_printoptions(threshold=np.inf)
 
-    test_G, test_L, test_XYZ, test_A, test_W = test_data
+    test_G, test_L, test_XYZ, test_A, test_W, test_S, test_I = test_data
     print (test_G.shape, test_L.shape, test_XYZ.shape, test_A.shape, test_W.shape)
     test_loss = 0
     num_samples = len(test_L)
@@ -270,12 +270,14 @@ else:
     for batch_idx in range(num_batches):
         start_idx = batch_idx * args.batchsize
         end_idx = min(start_idx + args.batchsize, num_samples)
-        G, L, XYZ, A, W = test_G[start_idx:end_idx], \
+        G, L, XYZ, A, W, S, I = test_G[start_idx:end_idx], \
                           test_L[start_idx:end_idx], \
                           test_XYZ[start_idx:end_idx], \
                           test_A[start_idx:end_idx], \
-                          test_W[start_idx:end_idx]
-        loss, _ = jax.jit(loss_fn, static_argnums=7)(params, key, G, L, XYZ, A, W, False)
+                          test_W[start_idx:end_idx], \
+                          test_S[start_idx:end_idx], \
+                          test_I[start_idx:end_idx]
+        loss, _ = jax.jit(loss_fn, static_argnums=9)(params, key, G, L, XYZ, A, W, S, I, False)
         test_loss += loss
     test_loss = test_loss / num_batches
     print ("evaluating loss on test data:" , test_loss)
@@ -347,7 +349,7 @@ else:
             L = jnp.concatenate([length, angle], axis=-1)
 
             # G = args.spacegroup * jnp.ones((n_sample), dtype=int)
-            logp_w, logp_xyz, logp_a, logp_l = jax.jit(logp_fn, static_argnums=7)(params, key, G, L, XYZ, A, W, False)
+            logp_w, logp_xyz, logp_a, logp_l = jax.jit(logp_fn, static_argnums=9)(params, key, G, L, XYZ, A, W, S, I, False)
 
             data['logp_w'] = np.array(logp_w).tolist()
             data['logp_xyz'] = np.array(logp_xyz).tolist()
