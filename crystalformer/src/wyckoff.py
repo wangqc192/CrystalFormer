@@ -140,7 +140,7 @@ ss_num_mapping = {'.-3.': 0, '..m': 1, '.-3m': 2, '..2': 3, 'm..': 4, '222.': 5,
 
 import gzip
 import pickle
-with gzip.open("/home/wangqc/project/WyckoffTransformer/cache/wychoffs_enumerated_by_ss.pkl.gz", "rb") as f:
+with gzip.open("/public/home/wangqingchang/CrystalFormer/data/wychoffs_enumerated_by_ss.pkl.gz", "rb") as f:
     wychoffs_enumerated_by_ss = pickle.load(f)
 
 ss_mapping = [wychoffs_enumerated_by_ss[2][i] for i in range(1,231)]

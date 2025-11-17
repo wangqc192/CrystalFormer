@@ -103,8 +103,8 @@ def train(key, optimizer, opt_state, loss_fn, params, epoch_finished, epochs, ba
                 data = jax.tree.map(lambda x: x.reshape(shape_prefix + x.shape[1:]), data)
 
                 keys, subkeys = p_split(keys)
-                loss, aux = jax.pmap(loss_fn, in_axes=(None, 0, 0, 0, 0, 0, 0),
-                                     static_broadcasted_argnums=7)(params, subkeys, *data, False)
+                loss, aux = jax.pmap(loss_fn, in_axes=(None, 0, 0, 0, 0, 0, 0, 0, 0),
+                                     static_broadcasted_argnums=9)(params, subkeys, *data, False)
                 valid_loss, valid_aux = jax.tree.map(
                         lambda acc, i: acc + jnp.mean(i),
                         (valid_loss, valid_aux), 

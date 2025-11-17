@@ -7,6 +7,7 @@ import os
 import multiprocessing
 import math
 import pickle
+from pathlib import Path
 
 from crystalformer.src.utils import GLXYZAW_from_file, letter_to_number
 from crystalformer.src.elements import element_dict, element_list
@@ -91,11 +92,12 @@ if args.num_io_process > num_cpu:
 
 
 ################### Data #############################
+root_path = str(Path(__file__).parent.resolve())
 if args.optimizer != "none":
-    train_path = '../data/' + args.dataset + '/train.csv'
-    val_path = '../data/' + args.dataset + '/val.csv'
-    save_train_path = '../data/' + args.dataset  + '/train.pt'
-    save_val_path = '../data/' + args.dataset  + '/val.pt'
+    train_path = root_path + '/data/' + args.dataset + '/train.csv'
+    val_path = root_path + '/data/' + args.dataset + '/val.csv'
+    save_train_path = root_path + '/data/' + args.dataset  + '/train.pt'
+    save_val_path = root_path + '/data/' + args.dataset  + '/val.pt'
     if os.path.isfile(save_train_path):
         train_data = pickle.load(open(save_train_path, "rb"))
     else:
@@ -106,8 +108,8 @@ if args.optimizer != "none":
         valid_data = GLXYZAW_from_file(val_path, args.atom_types, args.wyck_types, args.n_max, args.num_io_process, args.is_cif)
 else:
     assert (args.spacegroup is not None) # for inference we need to specify space group
-    test_path = '../data/' + args.dataset + '/test.csv'
-    save_test_path = '../data/' + args.dataset  + '/test.pt'
+    test_path = root_path + '/data/' + args.dataset + '/test.csv'
+    save_test_path = root_path + '/data/' + args.dataset  + '/test.pt'
     if os.path.isfile(save_test_path):
         test_data = pickle.load(open(save_test_path, "rb"))
     else:
@@ -290,8 +292,8 @@ else:
     else:
         T1 = args.temperature
 
-    #for g in [2,12,62,139,166,194,225, 17,48,50,158,151,184,185,188]:
-    for g in range(1,231):
+    for g in [2,12,62,139,166,194,225, 17,48,50,158,151,184,185,188]:
+    # for g in range(1,231):
         mc_steps = args.nsweeps * args.n_max
         print("mc_steps", mc_steps)
         mcmc = make_mcmc_step(params, n_max=args.n_max, atom_types=args.atom_types, atom_mask=atom_mask, constraints=constraints)

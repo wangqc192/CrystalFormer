@@ -57,7 +57,7 @@ def shuffle(key, data):
 def row_to_pyxtal(row):
     spg = int(row["spg"])
     a, b, c = row["a"], row["b"], row["c"]
-    alpha, beta, gamma = row["alpha"], row["beta"], row["gamma"]
+    alpha, beta, gamma = row["alpha"] * 180/np.pi, row["beta"] * 180 / np.pi, row["gamma"] * 180/np.pi
 
     spe = ast.literal_eval(row["spe"])  # 例如 ['Li', 'Mn', 'Ir', 'Ir']
 
@@ -106,7 +106,7 @@ def process_one(row, atom_types, wyck_types, n_max, tol=0.01, is_cif=True):
       A: atom types
       W: wyckoff letters
     """
-    if is_cif:
+    if "cif" in row.columns:
         cif = row["cif"]
         try: crystal = Structure.from_str(cif, fmt='cif')
         except: crystal = Structure.from_dict(eval(cif))
@@ -182,7 +182,7 @@ def process_one(row, atom_types, wyck_types, n_max, tol=0.01, is_cif=True):
 
     
     abc = np.array([c.lattice.a, c.lattice.b, c.lattice.c])/natoms**(1./3.)
-    angles = np.array([c.lattice.alpha, c.lattice.beta, c.lattice.gamma]) * 180 / np.pi
+    angles = np.array([c.lattice.alpha, c.lattice.beta, c.lattice.gamma])
     l = np.concatenate([abc, angles])
     
     #print ('===================================')
