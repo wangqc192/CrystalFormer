@@ -106,7 +106,7 @@ def process_one(row, atom_types, wyck_types, n_max, tol=0.01, is_cif=True):
       A: atom types
       W: wyckoff letters
     """
-    if "cif" in row.columns:
+    if "cif" in row.index:
         cif = row["cif"]
         try: crystal = Structure.from_str(cif, fmt='cif')
         except: crystal = Structure.from_dict(eval(cif))

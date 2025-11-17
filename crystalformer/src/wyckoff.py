@@ -4,6 +4,7 @@ import numpy as np
 import re
 import jax
 import jax.numpy as jnp
+from pathlib import Path
 
 def from_xyz_str(xyz_str: str):
     """
@@ -140,7 +141,8 @@ ss_num_mapping = {'.-3.': 0, '..m': 1, '.-3m': 2, '..2': 3, 'm..': 4, '222.': 5,
 
 import gzip
 import pickle
-with gzip.open("/public/home/wangqingchang/CrystalFormer/data/wychoffs_enumerated_by_ss.pkl.gz", "rb") as f:
+wy_en_path = str(Path(__file__).parent.parent.resolve()) + "/data/wychoffs_enumerated_by_ss.pkl.gz"
+with gzip.open(wy_en_path, "rb") as f:
     wychoffs_enumerated_by_ss = pickle.load(f)
 
 ss_mapping = [wychoffs_enumerated_by_ss[2][i] for i in range(1,231)]
