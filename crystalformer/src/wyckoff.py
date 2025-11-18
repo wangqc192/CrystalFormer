@@ -138,6 +138,11 @@ ss_num_mapping = {'.-3.': 0, '..m': 1, '.-3m': 2, '..2': 3, 'm..': 4, '222.': 5,
                   '.m': 60, '-43m': 61, '4/mm.m': 62, '2/m..': 63, '-3m2/m': 64, 'mm2..': 65, '..2/m': 66, '3mm': 67, '4mm': 68,
                   '-6..': 69, '-42.m': 70, 'mmm.': 71, 'mm2.': 72, 'm.mm': 73, 'm.m2': 74, '-3..': 75, '-42m': 76, '-4m.2': 77, '322': 78,
                   '.2.': 79, '622': 80, '4/mmm': 81}
+def letter_to_number(letter):
+    """
+    'a' to 1 , 'b' to 2 , 'z' to 26, and 'A' to 27 
+    """
+    return ord(letter) - ord('a') + 1 if 'a' <= letter <= 'z' else 27 if letter == 'A' else None
 
 import gzip
 import pickle
@@ -147,6 +152,26 @@ with gzip.open(wy_en_path, "rb") as f:
 
 ss_mapping = [wychoffs_enumerated_by_ss[2][i] for i in range(1,231)]
 ss_idx_mapping = [wychoffs_enumerated_by_ss[0][i] for i in range(1,231)]
+
+ss_map_table = []
+for dic in ss_mapping:
+    a = [-1]*28
+    for k,v in dic.items():
+        k = letter_to_number(k)
+        v = ss_num_mapping[v]
+        a[k] = v
+    ss_map_table.append(a)
+    
+ss_idx_map_table = []
+for dic in ss_idx_mapping:
+    a = [-1]*28
+    for k,v in dic.items():
+        k = letter_to_number(k)
+        a[k] = v
+    ss_idx_map_table.append(a)
+
+ss_map_table = jnp.array(ss_map_table)
+ss_idx_map_table = jnp.array(ss_idx_map_table)
 
     
 if __name__=='__main__':

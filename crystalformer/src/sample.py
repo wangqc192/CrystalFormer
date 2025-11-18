@@ -5,6 +5,9 @@ from functools import partial
 from crystalformer.src.von_mises import sample_von_mises
 from crystalformer.src.lattice import symmetrize_lattice
 from crystalformer.src.wyckoff import mult_table, symops
+from crystalformer.src.wyckoff import ss_idx_map_table, ss_map_table
+
+
 
 def project_xyz(g, w, x, idx):
     '''
@@ -25,7 +28,9 @@ def inference(model, params, g, W, A, X, Y, Z):
                            ], 
                            axis=-1)
     M = mult_table[g-1, W]  
-    return model(params, None, g, XYZ, A, W, M, False)
+    S = ss_map_table[g-1, W]
+    I = ss_idx_map_table[g-1, W]
+    return model(params, None, g, XYZ, A, W, M, S, I, False)
 
 def sample_top_p(key, logits, p, temperature):
     '''

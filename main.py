@@ -280,6 +280,13 @@ else:
         loss, _ = jax.jit(loss_fn, static_argnums=9)(params, key, G, L, XYZ, A, W, S, I, False)
         test_loss += loss
     test_loss = test_loss / num_batches
+    del G
+    del L
+    del XYZ
+    del A
+    del W
+    del S
+    del I
     print ("evaluating loss on test data:" , test_loss)
 
     print("\n========== Start sampling ==========")
@@ -349,15 +356,15 @@ else:
             L = jnp.concatenate([length, angle], axis=-1)
 
             # G = args.spacegroup * jnp.ones((n_sample), dtype=int)
-            logp_w, logp_xyz, logp_a, logp_l = jax.jit(logp_fn, static_argnums=9)(params, key, G, L, XYZ, A, W, S, I, False)
+            #logp_w, logp_xyz, logp_a, logp_l = jax.jit(logp_fn, static_argnums=9)(params, key, G, L, XYZ, A, W, S, I, False)
 
-            data['logp_w'] = np.array(logp_w).tolist()
-            data['logp_xyz'] = np.array(logp_xyz).tolist()
-            data['logp_a'] = np.array(logp_a).tolist()
-            data['logp_l'] = np.array(logp_l).tolist()
-            data['logp'] = np.array(logp_xyz + args.lamb_w*logp_w + args.lamb_a*logp_a + args.lamb_l*logp_l).tolist()
+            #data['logp_w'] = np.array(logp_w).tolist()
+            #data['logp_xyz'] = np.array(logp_xyz).tolist()
+            #data['logp_a'] = np.array(logp_a).tolist()
+            #data['logp_l'] = np.array(logp_l).tolist()
+            #data['logp'] = np.array(logp_xyz + args.lamb_w*logp_w + args.lamb_a*logp_a + args.lamb_l*logp_l).tolist()
 
-            data = data.sort_values(by='logp', ascending=False) # sort by logp
+            #data = data.sort_values(by='logp', ascending=False) # sort by logp
             header = False if os.path.exists(filename) else True
             data.to_csv(filename, mode='a', index=False, header=header)
 
